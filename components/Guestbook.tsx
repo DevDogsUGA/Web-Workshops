@@ -7,15 +7,17 @@ import { supabase } from "../lib/supabase";
 type Message = {
   id: string;
   user_id: string;
-  author_name: string;
   body: string;
   created_at: string;
+  // Embedded from public.profiles via the messages -> profiles foreign key.
+  // messages.user_id -> profiles.id is many-to-one, so PostgREST returns a
+  // single object here (or null) -- never an array.
+  profiles: { name: string } | null;
 };
 
 export default function Guestbook() {
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [name, setName] = useState("");
   const [body, setBody] = useState("");
 
   // Keep track of whether anyone is signed in, and react to sign-in/out.
@@ -33,8 +35,12 @@ export default function Guestbook() {
   useEffect(() => {
     supabase
       .from("messages")
-      .select("id, user_id, author_name, body, created_at")
+      .select("id, user_id, body, created_at, profiles(name)")
       .order("created_at", { ascending: false })
+      // Without generated database types, supabase-js guesses `profiles` is
+      // an array; a many-to-one embed is actually a single object, so we
+      // tell it the real shape here.
+      .overrideTypes<Message[], { merge: false }>()
       .then(({ data }) => setMessages(data ?? []));
   }, []);
 
@@ -53,23 +59,24 @@ export default function Guestbook() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
-    // Reject empty entries (after trimming whitespace).
-    if (!session || name.trim() === "" || body.trim() === "") {
+    if (!session || body.trim() === "") {
       return;
     }
 
-    // The name is whatever the signed-in user typed into the field below.
-    // (Step 4 of the workshop looks this up server-side instead.)
+    // The name is looked up server-side from public.profiles (set once, at
+    // sign-up) -- we never send it from the client, so no one can post
+    // under a name that isn't theirs.
     const { data, error } = await supabase
       .from("messages")
-      .insert({ author_name: name.trim(), body: body.trim() })
-      .select("id, user_id, author_name, body, created_at")
-      .single();
+      .insert({ body: body.trim() })
+      .select("id, user_id, body, created_at, profiles(name)")
+      .single()
+      // Same reasoning as the list query above -- this is a single row, and
+      // its embedded profile is a single object, not an array.
+      .overrideTypes<Message, { merge: false }>();
 
     if (!error && data) {
       setMessages([data, ...messages]);
-      setName("");
       setBody("");
     }
   }
@@ -94,13 +101,6 @@ export default function Guestbook() {
 
       {session && (
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Your name"
-            className="rounded-lg border border-gray-300 px-3 py-2"
-          />
           <textarea
             value={body}
             onChange={(event) => setBody(event.target.value)}
@@ -126,7 +126,7 @@ export default function Guestbook() {
         {messages.map((message) => (
           <li key={message.id} className="rounded-lg border border-gray-200 p-4">
             <div className="flex items-baseline justify-between">
-              <h2 className="font-semibold">{message.author_name}</h2>
+              <h2 className="font-semibold">{message.profiles?.name ?? "Unknown"}</h2>
               <span className="text-sm text-gray-500">
                 {new Date(message.created_at).toLocaleTimeString()}
               </span>
