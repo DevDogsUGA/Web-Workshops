@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
 type Message = {
@@ -12,7 +13,19 @@ type Message = {
 };
 
 export default function Guestbook() {
+  const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Keep track of whether anyone is signed in, and react to sign-in/out.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => setSession(newSession),
+    );
+
+    return () => subscription.subscription.unsubscribe();
+  }, []);
 
   // Load the guestbook, newest first, once on mount.
   useEffect(() => {
@@ -23,10 +36,39 @@ export default function Guestbook() {
       .then(({ data }) => setMessages(data ?? []));
   }, []);
 
+  function signIn() {
+    supabase.auth.signInWithOAuth({
+      // auth-js's Provider type only lists Supabase's built-in providers, so
+      // a custom OIDC provider like ours needs a cast to satisfy it.
+      provider: "custom:devdogsuga" as never,
+      options: { redirectTo: window.location.origin + "/guestbook" },
+    });
+  }
+
+  function signOut() {
+    supabase.auth.signOut();
+  }
+
   return (
     <div>
+      {session ? (
+        <button
+          onClick={signOut}
+          className="rounded-lg border border-gray-300 px-4 py-2"
+        >
+          Sign out
+        </button>
+      ) : (
+        <button
+          onClick={signIn}
+          className="rounded-lg bg-black px-4 py-2 text-white"
+        >
+          Sign in with DevDogs
+        </button>
+      )}
+
       <p className="mt-2 text-sm text-gray-500">
-        Anyone can read the guestbook below. Sign-in is coming next.
+        Anyone can read the guestbook below. Posting is coming next.
       </p>
 
       <ul className="mt-6 space-y-4">
