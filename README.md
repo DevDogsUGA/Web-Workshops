@@ -26,3 +26,25 @@ pnpm dev
 ```
 
 The app runs at [http://localhost:3000](http://localhost:3000).
+
+## 02 · Supabase
+
+Branch `02-supabase` adds a real backend to the guestbook: sign-in,
+row-level security, and a Postgres table instead of in-memory state.
+
+1. Create a project at [supabase.com](https://supabase.com), or run
+   `npx supabase start` to spin one up locally.
+2. Apply the two migrations under `supabase/migrations/` in order — either
+   paste each file into the dashboard's SQL editor, or let
+   `supabase start` / `supabase db reset` apply them for you.
+3. Add "Sign in with DevDogs" as an OAuth provider:
+
+   ```sh
+   pnpm dlx @devdogsuga/devtools oauth
+   ```
+
+   Note: this provider is stored outside the migrations, so it needs to be
+   re-added any time you run `supabase db reset`.
+4. Copy `.env.example` to `.env.local` and fill in your project's URL and
+   publishable key (both on the dashboard, under Project Settings > API).
+5. `pnpm dev` as usual.

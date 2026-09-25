@@ -81,6 +81,13 @@ export default function Guestbook() {
     }
   }
 
+  async function handleDelete(id: string) {
+    const { error } = await supabase.from("messages").delete().eq("id", id);
+    if (!error) {
+      setMessages(messages.filter((message) => message.id !== id));
+    }
+  }
+
   return (
     <div>
       {session ? (
@@ -132,6 +139,14 @@ export default function Guestbook() {
               </span>
             </div>
             <p className="mt-1 text-gray-600">{message.body}</p>
+            {session?.user.id === message.user_id && (
+              <button
+                onClick={() => handleDelete(message.id)}
+                className="mt-2 text-sm text-red-600"
+              >
+                Delete
+              </button>
+            )}
           </li>
         ))}
       </ul>
