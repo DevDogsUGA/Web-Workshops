@@ -1,76 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
-type Entry = {
-  name: string;
-  message: string;
-  postedAt: Date;
+type Message = {
+  id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
 };
 
 export default function Guestbook() {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [name, setName] = useState("");
-  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-
-    // Reject empty entries (after trimming whitespace).
-    if (name.trim() === "" || message.trim() === "") {
-      return;
-    }
-
-    const newEntry: Entry = {
-      name: name.trim(),
-      message: message.trim(),
-      postedAt: new Date(),
-    };
-
-    // Newest entries show up first.
-    setEntries([newEntry, ...entries]);
-    setName("");
-    setMessage("");
-  }
+  // Load the guestbook, newest first, once on mount.
+  useEffect(() => {
+    supabase
+      .from("messages")
+      .select("id, user_id, author_name, body, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setMessages(data ?? []));
+  }, []);
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Your name"
-          className="rounded-lg border border-gray-300 px-3 py-2"
-        />
-        <textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          placeholder="Leave a message"
-          className="rounded-lg border border-gray-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          className="self-start rounded-lg bg-black px-4 py-2 text-white"
-        >
-          Sign the guestbook
-        </button>
-      </form>
-
       <p className="mt-2 text-sm text-gray-500">
-        Entries live only in this browser tab. Refreshing the page clears them.
+        Anyone can read the guestbook below. Sign-in is coming next.
       </p>
 
       <ul className="mt-6 space-y-4">
-        {entries.map((entry, index) => (
-          <li key={index} className="rounded-lg border border-gray-200 p-4">
+        {messages.map((message) => (
+          <li key={message.id} className="rounded-lg border border-gray-200 p-4">
             <div className="flex items-baseline justify-between">
-              <h2 className="font-semibold">{entry.name}</h2>
+              <h2 className="font-semibold">{message.author_name}</h2>
               <span className="text-sm text-gray-500">
-                {entry.postedAt.toLocaleTimeString()}
+                {new Date(message.created_at).toLocaleTimeString()}
               </span>
             </div>
-            <p className="mt-1 text-gray-600">{entry.message}</p>
+            <p className="mt-1 text-gray-600">{message.body}</p>
           </li>
         ))}
       </ul>
