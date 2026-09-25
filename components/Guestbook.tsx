@@ -15,6 +15,8 @@ type Message = {
 export default function Guestbook() {
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [name, setName] = useState("");
+  const [body, setBody] = useState("");
 
   // Keep track of whether anyone is signed in, and react to sign-in/out.
   useEffect(() => {
@@ -49,6 +51,29 @@ export default function Guestbook() {
     supabase.auth.signOut();
   }
 
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
+    // Reject empty entries (after trimming whitespace).
+    if (!session || name.trim() === "" || body.trim() === "") {
+      return;
+    }
+
+    // The name is whatever the signed-in user typed into the field below.
+    // (Step 4 of the workshop looks this up server-side instead.)
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ author_name: name.trim(), body: body.trim() })
+      .select("id, user_id, author_name, body, created_at")
+      .single();
+
+    if (!error && data) {
+      setMessages([data, ...messages]);
+      setName("");
+      setBody("");
+    }
+  }
+
   return (
     <div>
       {session ? (
@@ -67,9 +92,35 @@ export default function Guestbook() {
         </button>
       )}
 
-      <p className="mt-2 text-sm text-gray-500">
-        Anyone can read the guestbook below. Posting is coming next.
-      </p>
+      {session && (
+        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Your name"
+            className="rounded-lg border border-gray-300 px-3 py-2"
+          />
+          <textarea
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            placeholder="Leave a message"
+            className="rounded-lg border border-gray-300 px-3 py-2"
+          />
+          <button
+            type="submit"
+            className="self-start rounded-lg bg-black px-4 py-2 text-white"
+          >
+            Sign the guestbook
+          </button>
+        </form>
+      )}
+
+      {!session && (
+        <p className="mt-2 text-sm text-gray-500">
+          Sign in to leave a message. Anyone can read the guestbook below.
+        </p>
+      )}
 
       <ul className="mt-6 space-y-4">
         {messages.map((message) => (
