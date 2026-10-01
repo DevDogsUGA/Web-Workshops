@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Navbar from "../components/Navbar";
 
 export const metadata: Metadata = {
   title: "DevDogs at UGA Workshops",
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Navbar />
+        <main className="mx-auto max-w-3xl px-6 py-10">{children}</main>
+      </body>
     </html>
   );
 }
