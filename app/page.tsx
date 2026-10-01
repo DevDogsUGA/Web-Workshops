@@ -1,7 +1,9 @@
+import Counter from "../components/Counter";
+
 export default function HomePage() {
   return (
-    <div>
-      <h1 className="text-3xl font-semibold">DevDogs at UGA Workshops</h1>
+    <div className="home">
+      <Counter />
     </div>
   );
 }
